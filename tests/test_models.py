@@ -24,7 +24,7 @@ While debugging just these tests it's convenient to use this:
 
 """
 import os
-import logging
+# import logging
 import unittest
 from decimal import Decimal
 from service.models import Product, Category, db
@@ -49,7 +49,7 @@ class TestProductModel(unittest.TestCase):
         app.config["TESTING"] = True
         app.config["DEBUG"] = False
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
-        app.logger.setLevel(logging.CRITICAL)
+        # app.logger.setLevel(logging.CRITICAL)
         Product.init_db(app)
 
     @classmethod
@@ -72,7 +72,12 @@ class TestProductModel(unittest.TestCase):
 
     def test_create_a_product(self):
         """It should Create a product and assert that it exists"""
-        product = Product(name="Fedora", description="A red hat", price=12.50, available=True, category=Category.CLOTHS)
+
+        product = Product(name="Fedora",
+        description="A red hat",
+        price=12.50, available=True,
+        category=Category.CLOTHS)
+
         self.assertEqual(str(product), "<Product Fedora id=[None]>")
         self.assertTrue(product is not None)
         self.assertEqual(product.id, None)
@@ -104,3 +109,100 @@ class TestProductModel(unittest.TestCase):
     #
     # ADD YOUR TEST CASES HERE
     #
+
+    def test_read_a_product(self):
+        """It should Read a Product"""
+        mock_product = ProductFactory()
+        mock_product.id = None
+        mock_product.create()
+        self.assertIsNotNone(mock_product.id)
+
+        found_product = Product.find(mock_product.id)
+        self.assertEqual(found_product.id, mock_product.id)
+        self.assertEqual(found_product.name, mock_product.name)
+        self.assertEqual(found_product.description, mock_product.description)
+        self.assertEqual(found_product.price, mock_product.price)
+
+    def test_update_a_product(self):
+        """It should Update a Product"""
+        mock_product = ProductFactory()
+        mock_product.id = None
+        mock_product.create()
+        self.assertIsNotNone(mock_product.id)
+
+        mock_product.description = "testing mock product"
+        initial_id = mock_product.id
+        mock_product.update()
+        self.assertEqual(mock_product.id, initial_id)
+        self.assertEqual(mock_product.description, "testing mock product")
+
+        products = Product.all()
+        self.assertEqual(len(products), 1)
+        self.assertEqual(products[0].id, initial_id)
+        self.assertEqual(products[0].description, "testing mock product")
+
+    def test_delete_a_product(self):
+        """It should Delete a Product"""
+        mock_product = ProductFactory()
+        mock_product.create()
+        self.assertEqual(len(Product.all()), 1)
+
+        mock_product.delete()
+        self.assertEqual(len(Product.all()), 0)
+
+    def test_list_all_products(self):
+        """It should List all Products in the database"""
+        mock_products = Product.all()
+        self.assertEqual(mock_products, [])
+
+        for _ in range(5):
+            mock_product = ProductFactory()
+            mock_product.create()
+
+        mock_products = Product.all()
+        self.assertEqual(len(mock_products), 5)
+
+    def test_find_by_name(self):
+        """It should Find a Product by Name"""
+        mock_products = ProductFactory.create_batch(5)
+
+        for product in mock_products:
+            product.create()
+
+        name = mock_products[0].name
+        count = len([product for product in mock_products if product.name == name])
+        found = Product.find_by_name(name)
+        self.assertEqual(found.count(), count)
+
+        for product in found:
+            self.assertEqual(product.name, name)
+
+    def test_find_by_availability(self):
+        """It should Find Products by Availability"""
+        mock_products = ProductFactory.create_batch(10)
+        for product in mock_products:
+            product.create()
+
+        available = mock_products[0].available
+        count = len([product for product in mock_products if product.available == available])
+        found = Product.find_by_availability(available)
+        self.assertEqual(found.count(), count)
+
+        for product in found:
+            self.assertEqual(product.available, available)
+
+    def test_find_by_category(self):
+        """It should Find Products by Category"""
+        mock_products = ProductFactory.create_batch(10)
+
+        for product in mock_products:
+            product.create()
+
+        category = mock_products[0].category
+        count = len([product for product in mock_products if product.category == category])
+
+        found = Product.find_by_category(category)
+        self.assertEqual(found.count(), count)
+
+        for product in found:
+            self.assertEqual(product.category, category)
